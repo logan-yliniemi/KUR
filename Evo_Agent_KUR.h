@@ -161,13 +161,6 @@ void Evo_Agent_KUR::show_action_vector() {
 
 void Evo_Agent_KUR::mutate() {
     /// <PARAM>
-    // actions.at(0)+=LYRAND*0.5-LYRAND*0.5;
-    // actions.at(1)+=LYRAND*0.5-LYRAND*0.5;
-    // actions.at(2)+=LYRAND*0.5-LYRAND*0.5;
-    //int debug_1=actions.size();
-    int debug_2=id;
-    
-    /// LYLY SHOEHORN HERE BE DRAGONS
     actions.resize(3);
     
     actions.at(0)+=LYrand_norm(0.3);

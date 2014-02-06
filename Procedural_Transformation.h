@@ -493,8 +493,7 @@ void Procedural_Transformation::N_Dummy_transform() {
 }
 
 void Procedural_Transformation::N_Pro_transform(int indicator) {
-    /// LYLY Here be dragons
-    /// <LYLY Experimental>
+    /// <LYLY Experimental, Deactivated>
     static vector<vector<double> > popcorn;
     if(indicator==0){
         popcorn.clear();
