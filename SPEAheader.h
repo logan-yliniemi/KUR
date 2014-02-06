@@ -47,8 +47,6 @@ public:
     double raw_distance_indicator;
     double distance_indicator;
     void startup();
-    //bool popu_mem;
-    //bool arch_mem;
     
     void take_agent(Evo_Agent_KUR);
     Evo_Agent_KUR agent;
@@ -59,8 +57,7 @@ void SPEA_2_mem::take_agent(Evo_Agent_KUR a){
 }
 
 void SPEA_2_mem::startup(){
-    //popu_mem=true;
-    //arch_mem=false;
+
 }
 
 bool sort_spea_first_dim(SPEA_2_mem const &x, SPEA_2_mem const &y)
@@ -443,23 +440,3 @@ vector<int> SPEA_2::mating_selection(){
 void SPEA_2::get_SPEA_fitness(vector<double>* pFitness) {
 
 }
-
-/*
- *
-int main() {
-    cout << "START" << endl;
-    srand(time(NULL));
-    SPEA_2 SPEA;
-    SPEA.SPEA_reset();
-    int a,b;
-    for(int i=0; i<10; i++) {
-        a=rand()%1000;
-        b=rand()%1000;
-        SPEA.two_dim_input(a,b);
-    }
-    SPEA.execute();
-    SPEA.look();
-
-    return 0;
-}
- */

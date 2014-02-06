@@ -3,10 +3,22 @@
  * Author: ylinieml
  */
 
+/// Evoluationary Algorithm Parameters
+/// <PARAM>
+#define POPULATION 100
+#define ELIMINATE 50
+#define GENERATIONS 2500
+#define STEPS 1
+#define STAT_RUNS 1
+#define BETA 0.5
+
+
 #define DO_LC 0
 #define DO_PACCET 0
 #define DO_NSGA 1
 #define DO_SPEA 0
+
+#define USE_ANCHORS 0
 
 #include <cstdlib>
 #include <math.h>
@@ -28,7 +40,6 @@ using namespace std;
 /// Small Functions/Macros
 #define LYRAND (double)rand()/RAND_MAX
 double LYrand_norm(double a){
-    
     double theta=LYRAND*2*PI;
     double rsq=-1*a*log(LYRAND);
     double x=rsq*cos(theta);   
@@ -36,19 +47,6 @@ double LYrand_norm(double a){
 }
 #define SMALL 0.0001
 #define HUNDI_ROUND(x) (double)floor(x*100)/100
-
-/// Problem Domain Parameters
-#define ACTIONS 5
-
-
-/// Evoluationary Algorithm Parameters
-/// <PARAM>
-#define POPULATION 100
-#define ELIMINATE 50
-#define GENERATIONS 2500
-#define STEPS 1
-#define STAT_RUNS 1
-#define BETA 0.5
 
 vector< vector<double> > Anchors;
 
@@ -140,25 +138,23 @@ int main(){
     
     Procedural_Transformation T;
     SPEA_2 SPEA;
-    //NSGA_2 NSGA;
-    //NSGA.declare_NSGA_dimension(2);
     
+    if(USE_ANCHORS){
     vector<double> one;
     vector<double> two; 
-    //one.push_back(20); 
-    //one.push_back(0); 
     
-    //two.push_back(14.44);
-    //two.push_back(11.61);
+    one.push_back(20); 
+    one.push_back(0); 
     
-    //Anchors.push_back(one);
-    //Anchors.push_back(two);
+    two.push_back(14.44);
+    two.push_back(11.61);
+    
+    Anchors.push_back(one);
+    Anchors.push_back(two);
+    }
     
     for(int stat_run=0; stat_run < STAT_RUNS; stat_run++) {
             T.Pareto_Reset();
-            // /// We assume we can find our best solution for each objective.
-            //T.Pareto_Check(one);
-            //T.Pareto_Check(two);
             
             KURclass environment;
             environment.start();
@@ -171,7 +167,6 @@ int main(){
                 Evo_Agent_KUR EA;
                 EA.id=i;
                 EA.start();
-                //cout << "EA "<<i<<" actions size is " << EA.actions.size() << endl;
                 pVA->push_back(EA);
             }
 
@@ -184,16 +179,12 @@ int main(){
                 for (int mem=0; mem<POPULATION; mem++) {
                     Evo_Agent_KUR* pA = &pVA->at(mem);
                     pA->reset();
-                for (int time = 0; time < STEPS; time++) {
-                    if(pA->end_episode){break;}
+                    /// KUR is a bi-minimization problem. This implementation of PaCcET is for maximization.
                     /// Objective reversal is done here and here only.
                     double f1hold = -pE->f1(pA->get_action(0),pA->get_action(1),pA->get_action(2));
                     double f2hold = -pE->f2(pA->get_action(0),pA->get_action(1),pA->get_action(2));
-                    //cout << "F1: " << f1hold << endl;
-                    //cout << "F2: " << f2hold << endl;
                     pA->set_f1(f1hold);
                     pA->set_f2(f2hold);
-               }
                }
                 
                 /// we set up the pareto front:

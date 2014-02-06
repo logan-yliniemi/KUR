@@ -36,8 +36,6 @@ class Evo_Agent_KUR {
     void console_1vector(vector<double>);
     void console_2vector(vector<vector<double> >);
 
-    int rand_action();
-
     double Initial_Q_Value;
     
     
@@ -65,12 +63,6 @@ public:
     
     void set_raw_fitness(double raw);
     void set_fitness(double fit);
-    
-    /// Body Values:
-    int x;
-    int y;
-    bool out_of_bounds;
-    bool end_episode;
 };
 
 void Evo_Agent_KUR::start() {
@@ -80,10 +72,6 @@ void Evo_Agent_KUR::start() {
 }
 
 void Evo_Agent_KUR::reset() {
-    x=0;
-    y=0;
-    out_of_bounds=false;
-    end_episode=false;
     f2=0;
     f1=0;
 }
@@ -103,8 +91,8 @@ double Evo_Agent_KUR::get_fitness(){
     return fitness;
 }
 
-double Evo_Agent_KUR::get_action(int time){
-    return actions.at(time);
+double Evo_Agent_KUR::get_action(int spot){
+    return actions.at(spot);
 }
 
 void Evo_Agent_KUR::set_f1(double val){
@@ -145,12 +133,6 @@ void Evo_Agent_KUR::console_1vector(vector<double> a) {
     }
 }
 
-int Evo_Agent_KUR::rand_action() {
-    int a;
-    a = rand() % ACTIONS;
-    return a;
-}
-
 void Evo_Agent_KUR::show_action_vector() {
     int A=actions.size();
     for(int a=0; a<A; a++){
@@ -162,7 +144,6 @@ void Evo_Agent_KUR::show_action_vector() {
 void Evo_Agent_KUR::mutate() {
     /// <PARAM>
     actions.resize(3);
-    
     actions.at(0)+=LYrand_norm(0.3);
     actions.at(1)+=LYrand_norm(0.3);
     actions.at(2)+=LYrand_norm(0.3);

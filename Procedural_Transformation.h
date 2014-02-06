@@ -555,20 +555,8 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
     }
     td.resize(I);
     
-    //// TODO CHECK DOMINATION OF UPPER BOUND; IF UPPER BOUND IS NON-DOMINATED, DOUBLE IT.
-//    bool upper_bound_dominated_by_v=false;
-//    while(upper_bound_dominated_by_v==false){
-//        upperbound*=2;
-//        upper_bound_dominated_by_v=true;
-//        for(int i=0; i<I; i++){
-//        td.at(i) = 1 + upperbound*directional_ratios.at(i);
-//        }
-//        for(int i=0; i<I; i++){
-//            if(input.at(i) <= td.at(i)){
-//               upper_bound_dominated_by_v=false; /// if TD is better on any one dimension, it is not dominated.
-//            }
-//            }
-//    }
+    /// TODO exception handing for extending the PFront on the extremes.
+    /// TODO calculate max upper bound based on number of objectives.
     
     while(margin>0.0001){
         dominated=false;
@@ -635,12 +623,6 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
     int stopper;
     for(int i=0; i<I; i++){
         output.push_back(1+dprime*directional_ratios.at(i));
-        // checksum+=(1+dprime*directional_ratios.at(i));
-        // if(checksum > 1.0){cout << "HOLDING FOR USER EVALUATION" << endl;
-        // cout << "Checksum: " << checksum << endl;
-        // cout << "output.at up to i: " << output.at(0) << endl;;
-        // if(i>0){cout << "op 1: " << output.at(1) << endl;}
-        // cin >> stopper;}
     }
     
     
@@ -649,7 +631,7 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
 
 void Procedural_Transformation::Pro_transform() { 
     /// ONLY VALID FOR TWO DIMENSIONS
-    // Theoretically valid for "n" dimensions with changes.
+    // Theoretically valid for "n" dimensions with changes (N_Pro_transform())
     // cout << "PRO Transform input 0: " << input.at(0) << endl;
     // cout << "PRO Transform input 1: " << input.at(1) << endl;
     //cout << "input size: " << input.size() << endl;
@@ -830,160 +812,6 @@ void Pro_Pareto_testing(){
     T.Pareto_Check(coords);
     T.cout_pareto();
     coords.clear();
-}
-
-void Procedural_testing(){
-    FILE* infile; infile = fopen("batch_inputs.txt","w");
-    FILE* outfile; outfile = fopen("batch_outputs.txt","w");
-    FILE* thetafile; thetafile = fopen("batch_theta_coef_map.txt","w");
-    FILE* domfile; domfile= fopen("batch_dominated.txt","w");
-    Procedural_Transformation T;
-    
-    vector<double> one;
-    vector<double> two; 
-    vector<double> three;
-    vector<double> four;
-    vector<double> five; 
-    vector<double> six;
-    vector<double> seven;
-    vector<double> eight; 
-    vector<double> nine;
-    vector<double> ten;
-    
-    // static const int arr[] = {1,1,0,0,0,0,0,0,0,0};
-    // static const int arr[] = {1,1,0,0,0,0,0,0,1,0};
-    // static const int arr[] = {1,1,0,0,0,0,1,0,1,0};
-    // static const int arr[] = {1,1,0,0,0,1,1,0,1,0};
-    // static const int arr[] = {1,1,0,0,1,1,1,0,1,0};
-     static const int arr[] = {1,1,0,1,1,1,1,0,1,0};
-    // static const int arr[] = {1,1,1,1,1,1,1,0,1,0}; // x
-    
-    
-    /*
-            T.Pareto_Check(one);
-            T.Pareto_Check(two);
-            T.Pareto_Check(nine);
-            T.Pareto_Check(seven);
-            T.Pareto_Check(six);
-            T.Pareto_Check(five);
-            T.Pareto_Check(four);
-            T.Pareto_Check(three);
-     * */
-    
-    if(arr[0])
-    {
-    one.push_back(30.0);
-    one.push_back(1.0);
-    T.Pareto_Check(one);
-    }
-    
-    if(arr[1]){
-    two.push_back(12.0);
-    two.push_back(124.0);
-    T.Pareto_Check(two);
-    }
-    
-    if(arr[2]){
-    three.push_back(28.0);
-    three.push_back(2.0);
-    T.Pareto_Check(three);
-    }
-    
-    if(arr[3]){
-    four.push_back(26.0);
-    four.push_back(3.0);
-    T.Pareto_Check(four);
-    }
-    
-    if(arr[4]){
-    five.push_back(24.0);
-    five.push_back(5.0);
-    T.Pareto_Check(five);
-    }
-    
-    if(arr[5]){
-    six.push_back(23.0);
-    six.push_back(8.0);
-    T.Pareto_Check(six);
-    }
-    
-    if(arr[6]){
-    seven.push_back(22.0);
-    seven.push_back(16.0);
-    T.Pareto_Check(seven);
-    }
-    
-    if(arr[7]){
-    eight.push_back(18.0);
-    eight.push_back(24.0);
-    T.Pareto_Check(eight);
-    }
-    
-    if(arr[8]){
-    nine.push_back(17.0);
-    nine.push_back(50.0);
-    T.Pareto_Check(nine);
-    }
-
-    if(arr[9]){
-    ten.push_back(14.0);
-    ten.push_back(74.0);
-    T.Pareto_Check(ten);
-    }
-    
-    int jjj=0;
-    int jjjj=0;
-    
-    int TIMEMAX=31;
-    int TREASUREMAX=125;
-    for(int time_test = 12; time_test < TIMEMAX; time_test++){
-        for(int treasure_test=1; treasure_test < TREASUREMAX; treasure_test++){
-    vector<double> in;
-    vector<double>* pin= &in;
-    in.push_back(time_test);
-    in.push_back(treasure_test);
-    
-    cout << "Before: ";
-    for(int obj=0; obj<OBJECTIVES; obj++){
-        cout << in.at(obj) << "\t";
-    }
-    cout << endl;
-    
-    //fprintf(pFILE, "%.5f\t", value);
-    fprintf(infile,"%.5f\t", in.at(0));
-    fprintf(infile, "%.5f\n", in.at(1));    
-    
-    if(T.Dominated_Check(in)){
-        jjj++;
-        ///cout << "if " << jjj << "\t" << jjjj << endl;
-        if(T.is_Pareto(in)!=-1){
-            fprintf(domfile, "%.2f\n", 2.0); 
-        }
-        else{
-        fprintf(domfile, "%.2f\n", 1.0); 
-        }
-    }
-    else{
-        jjjj++;
-        ///cout << "else " << jjj << "\t" << jjjj << endl;
-        fprintf(domfile, "%.2f\n", 0.0); 
-    }
-    
-    T.execute_transform(pin);
-    
-    cout << "After: ";
-    for(int obj=0; obj<OBJECTIVES; obj++){
-        cout << in.at(obj) << "\t";
-    }
-    cout << endl;
-    fprintf(outfile,"%.5f\t", in.at(0));
-    fprintf(outfile, "%.5f\n", in.at(1));
-    }
-    }
-    fflush(infile);
-    fflush(outfile);
-    fflush(domfile);
-    T.cout_pareto();
 }
 
 #endif	/* PROCEDURAL_TRANSFORMATION_H */
