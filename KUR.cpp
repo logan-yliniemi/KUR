@@ -14,8 +14,8 @@
 
 
 #define DO_LC 0
-#define DO_PACCET 0
-#define DO_NSGA 1
+#define DO_PACCET 1
+#define DO_NSGA 0
 #define DO_SPEA 0
 
 #define USE_ANCHORS 0
@@ -96,6 +96,7 @@ void newline(FILE* pFILE) { /// report to text file
 #include "SPEAheader.h"
 
 void grid_visualize(Procedural_Transformation* pT);
+void contour_visualize(Procedural_Transformation* pT);
 
 class KURclass{
 public:
@@ -155,6 +156,10 @@ int main(){
     
     for(int stat_run=0; stat_run < STAT_RUNS; stat_run++) {
             T.Pareto_Reset();
+            vector<double> badness;
+            badness.push_back(-100.0);
+            badness.push_back(-100.0);
+            T.Pareto_Check(badness);
             
             KURclass environment;
             environment.start();
@@ -223,7 +228,7 @@ int main(){
                     SPEA.vector_input(MO,a);
                     }
                     if(DO_PACCET){
-                    T.execute_transform(pMO);
+                    T.execute_N_transform(pMO,0);
                     //T.Pareto_Check(OMO);
                     
                     double TIME_WEIGHT=BETA;
@@ -361,7 +366,8 @@ int main(){
     T.cout_pareto();
     
     Procedural_Transformation* pT=&T;
-    grid_visualize(pT);
+    //grid_visualize(pT);
+    contour_visualize(pT);
 }
 
 void grid_visualize(Procedural_Transformation* pT){
@@ -391,7 +397,6 @@ void grid_visualize(Procedural_Transformation* pT){
     ymax = 11.42;
     ymin = -0.1;
     ppl = 200;
-    
     
     double x_const_spacing = (xmax-xmin) / spaces;
     double y_const_spacing = (ymax-ymin) / spaces;
@@ -496,4 +501,126 @@ void grid_visualize(Procedural_Transformation* pT){
     fclose(pFILE_trans_pareto);
     
     cout << "Grid Visualize Ending" << endl;
+}
+
+void contour_visualize(Procedural_Transformation* pT){
+    cout << "Contour Visualize Starting" << endl;
+    
+    int EQUAL_CONTOUR=1;
+    int STEEPEST_GROWTH=0;
+    
+    FILE* pFILE_coord;
+    FILE* pFILE_dom;
+    FILE* pFILE_trans;
+    
+    pFILE_coord=fopen("regular_space_coords.txt","w");
+    pFILE_dom=fopen("dom.txt","w");
+    pFILE_trans=fopen("transformed_space_coords.txt","w");
+    
+    vector<vector< double > > line;
+    vector<double>* pcoord;
+    
+    /// Decide on grid line spacing
+    int grid_lines,spaces;
+    int ppl;
+    double min_contour,max_contour,width;
+    
+    /// <PARAM>
+    grid_lines=60;
+    spaces=grid_lines-1;
+    min_contour = 0;
+    max_contour = 1;
+    width = 1.4;
+    ppl = 200;
+    
+    double line_spacing = (max_contour - min_contour) / spaces;
+    double dot_spacing = width/ppl;
+    
+    
+    double contour = min_contour;
+    for(int ln=0; ln<grid_lines; ln++){
+        line.clear();
+    /// Make Single Contour line
+    /// Contour Value
+        contour += line_spacing;
+        double x,y;
+        if(EQUAL_CONTOUR){
+            x = contour*sqrt(2) - width*sqrt(2)/2; 
+            y = contour*sqrt(2) + width*sqrt(2)/2;
+        }
+        if(STEEPEST_GROWTH){
+            x = contour*sqrt(2) - width*sqrt(2)/2; 
+            y = - contour*sqrt(2) + width*sqrt(2)/2;
+        }
+         for(int pt=0; pt<ppl; pt++){
+         vector<double> point;
+         point.push_back(x);
+         point.push_back(y);
+         
+         
+         line.push_back(point);
+         if(EQUAL_CONTOUR){
+         y-=dot_spacing*sqrt(2);
+         x+=dot_spacing*sqrt(2);
+         }
+         if(STEEPEST_GROWTH){
+         y+=dot_spacing*sqrt(2);
+         x+=dot_spacing*sqrt(2);
+         }
+         
+         }
+        
+        /// Print out transformed space
+    for(int i=0; i<line.size(); i++){
+        for(int j=0; j<line.at(i).size(); j++){
+        report(pFILE_trans,line.at(i).at(j),1);
+        }
+        newline(pFILE_trans);
+        /// ^V.W.A.I. Feb 25, 2014.
+        
+        /// Reverse Transformation
+        /// Take one coords at a time, feed it through transformation
+        pcoord = &line.at(i);
+        pT->execute_N_reverse_transform(pcoord,0);
+
+    /// Print out untransformed
+        for(int j=0; j<line.at(i).size(); j++){
+        report(pFILE_coord,line.at(i).at(j),1);
+        }
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        newline(pFILE_coord);
+        newline(pFILE_dom);
+    }
+    
+    }
+    
+    fclose(pFILE_coord);
+    fclose(pFILE_dom);
+    fclose(pFILE_trans);
+    
+    
+    vector<double> held;
+    vector<double>* pH;
+    
+    FILE* pFILE_orig_pareto=fopen("orig_pareto.txt","w");
+    FILE* pFILE_trans_pareto=fopen("trans_pareto.txt","w");
+    for(int i=0; i<pT->get_pareto_size(); i++){
+        /// print out original Pareto front
+        held=pT->get_ith_pareto_approximate_member(i);
+        pH=&held;
+        for(int obj=0; obj<OBJECTIVES; obj++){
+        report(pFILE_orig_pareto,held.at(obj),1);
+        }
+        /// print out transformed Pareto front
+        pT->execute_N_transform(pH,0);
+        for(int obj=0; obj<OBJECTIVES; obj++){
+        report(pFILE_trans_pareto,held.at(obj),1);
+        }
+        newline(pFILE_orig_pareto);
+        newline(pFILE_trans_pareto);
+    }
+    fclose(pFILE_orig_pareto);
+    fclose(pFILE_trans_pareto);
+    
+    cout << "Contour Visualize Ending" << endl;
 }

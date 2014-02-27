@@ -3,6 +3,7 @@
  * Author: ylinieml
  *
  * Created on October 22, 2013, 11:58 AM
+ * Sealed as a black box Feb 18, 2014.
  */
 
 
@@ -10,7 +11,7 @@
 #define	PROCEDURAL_TRANSFORMATION_H
 
 #define PFRONT_THRESHOLD 250
-#define PFRONT_BUFFER 2
+#define PFRONT_BUFFER 1
 #define K_FOR_KNN 20
 
 #define OBJECTIVES 2
@@ -19,6 +20,8 @@
 #define TREASURE_DEX 1
 
 #define DISCOVERY_THRESHOLD 200
+
+/// <Black Box Line>
 
 #ifndef VECTOR_INCLUDE
 #define VECTOR_INCLUDE
@@ -46,15 +49,14 @@ class Procedural_Transformation{
     vector<double> nadir;
     vector< vector<double> > single_obj_max;
     vector< vector<double> > PFront;
-    vector< vector<double> > Domination_Corners;
     vector< vector<double> > scPFront;
-    vector< vector<double> > scCorners;
+    
+    vector< vector<double> > exhaustive_PFront;
 
     vector<double> input;
     void take_input(vector<double>* coords);
     
     void scale();
-    void Pro_transform();
     void N_Pro_transform(int indicator);
     void N_Dummy_transform();
     
@@ -64,14 +66,14 @@ class Procedural_Transformation{
     
     vector<double> output;
     void give_output(vector<double>* coords);
-
     
 public:
+    void exhaustive_to_file();
+    void PFront_to_file();
     void nad_ut();
     void train();
     
     bool Pareto_Check(vector<double>);
-    bool Discrete_Pareto_Check(vector<double>);
     bool Dominated_Check(vector<double> coords);
     int is_Pareto(vector<double> coords);
     
@@ -87,7 +89,45 @@ public:
     void print_pareto(FILE*);
     void cout_scaled_pareto();
     vector<double> get_ith_pareto_approximate_member(int i);
+    
+    /// COMPONENTS
+    double calc_d(vector<double>);
+    double calc_dprime(double, double, double);
+    double calc_D(vector<double>,vector< vector<double> >);
+    double calc_Dprime(vector<double>);
+    
+    /// REVERSE PROCESS
+    void execute_N_reverse_transform(vector<double>* pinputs, int indicator);
+    void N_Pro_reverse_transform(int indicator);
+    void scale_reverse();
 };
+
+void Procedural_Transformation::exhaustive_to_file(){
+    FILE* PFILE;
+    cout << "exhaustive in" << endl;
+    PFILE=fopen("exhaustive_pareto.txt","w");
+    for(int i=0; i<exhaustive_PFront.size(); i++){
+        report(PFILE,exhaustive_PFront.at(i).at(0),1);
+        report(PFILE,exhaustive_PFront.at(i).at(1),1);
+        report(PFILE,exhaustive_PFront.at(i).at(2),0);
+        newline(PFILE);
+    }
+    fclose(PFILE);
+    cout << "exhaustive out" << endl;
+}
+
+void Procedural_Transformation::PFront_to_file(){
+    FILE* PFILE;
+    cout << "Pfront to file in" << endl;
+    PFILE=fopen("T_final_front.txt","w");
+    for(int i=0; i<PFront.size(); i++){
+        report(PFILE,PFront.at(i).at(0),1);
+        report(PFILE,PFront.at(i).at(1),1);
+        report(PFILE,PFront.at(i).at(2),0); // no tab
+        newline(PFILE);
+    }
+    cout << "Pfront to file out" << endl;
+}
 
 vector<double> Procedural_Transformation::get_ith_pareto_approximate_member(int i){
     return PFront.at(i);
@@ -99,9 +139,7 @@ int Procedural_Transformation::get_pareto_size(){
 
 void Procedural_Transformation::Pareto_Reset(){
     PFront.clear();
-    Domination_Corners.clear();
     scPFront.clear();
-    scCorners.clear();
     single_obj_max.clear();
     utopia.clear();
     nadir.clear();
@@ -154,23 +192,6 @@ void Procedural_Transformation::cout_scaled_pareto(){
     cout << endl;
 }
 
-void Procedural_Transformation::calculate_corners(){
-    /// Calculate corners of dominated hyperspace. 
-    /// These include Pareto Optimal points and joints where Pareto Optimal point shadows intersect.
-    
-    /// First, Pareto-Optimal Points:
-    for(int i=0; i<PFront.size(); i++){
-        Domination_Corners.push_back(PFront.at(i));
-    }
-    /// Then the shadow corners:
-    for(int i=0; i<PFront.size()-1; i++){
-        vector<double> V;
-        V.push_back(PFront.at(i).at(0));
-        V.push_back(PFront.at(i+1).at(1));
-        Domination_Corners.push_back(V);
-    }
-}
-
 bool Procedural_Transformation::Dominated_Check(vector<double> coords){
     /// <Is it dominated by any point in the Pareto front??>
     /// For each Pareto point
@@ -202,32 +223,6 @@ int Procedural_Transformation::is_Pareto(vector<double> coords){
         if(yes){return i;}
     }
     return -1;
-}
-
-bool Procedural_Transformation::Discrete_Pareto_Check(vector<double> coords){
-    /// if we've seen this point X amount of times before, then we pareto check
-    static vector< vector<double> > purgatory;
-    int not_yet_in_purgatory=1;
-    for(int i=0; i<purgatory.size(); i++){
-        int inc=1;
-        for(int obj=0; obj<OBJECTIVES; obj++){
-        if(purgatory.at(i).at(obj) != coords.at(obj)){inc=0; break;}
-        }
-        if(inc==1){
-            not_yet_in_purgatory=0;
-            purgatory.at(i).at(OBJECTIVES)+=1.0;
-            if(purgatory.at(i).at(OBJECTIVES)>DISCOVERY_THRESHOLD){
-                Pareto_Check(coords);
-            }
-        }
-    }
-    if(not_yet_in_purgatory==1){
-        purgatory.push_back(coords);
-        purgatory.back().push_back(0.0);
-    }
-    
-    return false;
-    return true;
 }
 
 bool Procedural_Transformation::Pareto_Check(vector<double> coords){
@@ -273,12 +268,6 @@ bool Procedural_Transformation::Pareto_Check(vector<double> coords){
     }
     
     /// <Eliminate dominated points on the Pareto Front>
-    //for(int e=0; e<eliminate.size(); e++){
-    //    int spot = eliminate.at(e);
-    //    PFront.erase(PFront.begin()+spot);
-    //}
-    
-    /// <Eliminate dominated points on the Pareto Front>
     for(int e=eliminate.size()-1; e>=0; e--){
         /// We eliminate from end -> beginning so that the indices we calculated remain valid.
         int spot = eliminate.at(e);
@@ -287,6 +276,9 @@ bool Procedural_Transformation::Pareto_Check(vector<double> coords){
     
     /// <Add new point in correct spot of Pareto Front>
     PFront.push_back(coords);
+    // also add it to master list.
+    exhaustive_PFront.push_back(coords);
+    
     /// TODO PFront.emplace()
 //    int X=0;
 //    /// We want to insert it in the sorted position, so we must find where to insert it.
@@ -373,10 +365,8 @@ bool Procedural_Transformation::Pareto_Check(vector<double> coords){
     }
     
     /// Since Pareto Front has changed, we recalculate the dominated hyperspace.
-    //LYLY //calculate_corners();
     nad_ut();
     calculate_scaled_pareto();
-    //calculate_scaled_corners();
     return true;
 }
 
@@ -393,6 +383,8 @@ void Procedural_Transformation::calculate_scaled_pareto(){
     for(int i=0; i < PFront.size(); i++){
         vector<double> dual;
         for(int j=0; j < PFront.at(i).size(); j++){
+            //cout << "Pfront at i size: " << PFront.at(i).size() << endl;
+            //cout << "Nadir size: " << nadir.size() << endl;
             double val = PFront.at(i).at(j);
             double min = nadir.at(j);
             double range = utopia.at(j)-nadir.at(j);
@@ -401,24 +393,6 @@ void Procedural_Transformation::calculate_scaled_pareto(){
         scPFront.push_back(dual);
     }
     
-}
-
-void Procedural_Transformation::calculate_scaled_corners(){
-    /// update vector< vector<double> > scCorners;
-    if(PFront.size() <= 1){return;}
-    scCorners.clear();
-    
-    for(int i=0; i < Domination_Corners.size(); i++){
-        vector<double> dual;
-        for(int j=0; j<Domination_Corners.at(i).size(); j++){
-            double val = Domination_Corners.at(i).at(j);
-            double min = nadir.at(j);
-            double range = utopia.at(j)-nadir.at(j);
-            dual.push_back((val - min) / range);
-        }
-        scCorners.push_back(dual);
-    }
-
 }
 
 void Procedural_Transformation::take_objective_max(vector<double> coords){
@@ -459,8 +433,6 @@ void Procedural_Transformation::nad_ut(){
         }
         nadir.push_back(PFront.at(mindex).at(o)); 
     }
-    //nadir.push_back(PFront.at(0).at(0)); /// time
-    //nadir.push_back(PFront.back().at(1)); /// treasure
     
     // 2)
     utopia.clear();
@@ -478,8 +450,6 @@ void Procedural_Transformation::nad_ut(){
         utopia.push_back(PFront.at(maxdex).at(o)+0.00001);   
     }
     /// Added constant avoids atan2 problems at the edges of the PFront.
-    //utopia.push_back(PFront.back().at(0)+0.000001); /// time
-    //utopia.push_back(PFront.at(0).at(1)+0.000001); /// treasure
     
     //cout << "Nadir: " << nadir.at(0) << "\t" << nadir.at(1) << endl;
     //cout << "Utopia: " << utopia.at(0) << "\t" << utopia.at(1) << endl;
@@ -493,7 +463,7 @@ void Procedural_Transformation::N_Dummy_transform() {
 }
 
 void Procedural_Transformation::N_Pro_transform(int indicator) {
-    /// <LYLY Experimental, Deactivated>
+    /// <LYLY Experimental>
     static vector<vector<double> > popcorn;
     if(indicator==0){
         popcorn.clear();
@@ -507,21 +477,13 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
         }
     }
     
-    /// TODO
-    /// N Dimensional
-    //cout_scaled_pareto();
-    //cout << "PRO Transform input 0: " << input.at(0) << endl;
-    //cout << "PRO Transform input 1: " << input.at(1) << endl;
-    //cout << "PRO Transform input 2: " << input.at(2) << endl;
     vector<double> deltas;
     int I=input.size();
     for(int i=0; i<I; i++){
         deltas.push_back(input.at(i)-1);
-        //cout << "Delta " << i << " = " << deltas.at(i) << endl;
-        //if(input.at(i)>=1){cout << "!" << i << " " << input.at(i) << endl;}
     }
     
-    /// paper notation december 13, 2013.
+    /// paper notation as of December 13, 2013.
     /// <FIND d>
     double d=0;
     for(int i=0; i<I; i++){
@@ -543,20 +505,17 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
     
     double sumdeltassq=0.0;
     for(int i=0; i<I; i++){
-        //directional_ratios.push_back(inputs.at(i)/inputs.at(0));
         sumdeltassq+=deltas.at(i)*deltas.at(i);
-        //sumdeltassq+=deltas.at(i);
     }
     sumdeltassq=sqrt(sumdeltassq);
     for(int i=0; i<I; i++){
-        /// More truly directional cosines.
+        /// More truly: directional cosines.
     directional_ratios.push_back(deltas.at(i)/sumdeltassq);
-    //cout << "DIRECTIONAL RATIO " << i << " :: " << directional_ratios.back()<< endl;
+    //cout << "DIRECTIONAL COSINES " << i << " :: " << directional_ratios.back()<< endl;
     }
     td.resize(I);
     
-    /// TODO exception handing for extending the PFront on the extremes.
-    /// TODO calculate max upper bound based on number of objectives.
+    /// TODO intelligently select upper bound as a function of the number of objectives.
     
     while(margin>0.0001){
         dominated=false;
@@ -573,24 +532,17 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
             int counter=0;
             /// if all objectives score better than the td vector
             for(int i=0; i<I; i++){
-                //cout << "sc" << scPFront.at(p).at(i) << " " << scPFront.size() << " " << scPFront.at(p).size() << endl;
-                //cout << "pop" << popcorn.at(p).at(i) << " " << popcorn.size() << " " << popcorn.at(p).size() << endl;
-                //cout << "td" << td.at(i) << " " << td.size() <<  endl;
-                
                 if(scPFront.at(p).at(i)+popcorn.at(p).at(i)>=td.at(i)){
                     counter++;
                 }
-                //cout << "COUNTER: " << counter << endl;
             }
             if(counter==I){dominated=true;}
         }
-        //cout << "DOMCHECK2: " << dominated << endl;
         if(dominated==true){upperbound = candidate;}
         if(dominated==false){lowerbound = candidate;}
         margin=upperbound-lowerbound;
     }
     D=(upperbound+lowerbound)/2;
-    //cout << "D = " << D << endl;
     
     /// <FIND D'>
     double Dprime;
@@ -603,20 +555,16 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
         candidate=(upperbound+lowerbound)/2;
         for(int i=0; i<I; i++){
         td.at(i) = 1 + candidate*directional_ratios.at(i);
-        //cout << "point: " << i << " = " << td.at(i) << endl;
         }
-        //cout << "LC CHECKERS " << (double)accumulate(td.begin(),td.end(),0.0) << endl;
         if(accumulate(td.begin(),td.end(),0.0) <= 1){dominated = true;}
         if(dominated==true){upperbound = candidate;}
         if(dominated==false){lowerbound = candidate;}
         margin=upperbound-lowerbound;
     }
     Dprime = (upperbound+lowerbound)/2;
-    //cout << "DPrime = " << Dprime << endl;
     
     /// <CALCULATE d'>
     double dprime = d*Dprime/D;
-    //cout << "dprime = " << dprime << endl;
     
     output.clear();
     double checksum=0;
@@ -624,93 +572,224 @@ void Procedural_Transformation::N_Pro_transform(int indicator) {
     for(int i=0; i<I; i++){
         output.push_back(1+dprime*directional_ratios.at(i));
     }
-    
-    
-    
 }
 
-void Procedural_Transformation::Pro_transform() { 
-    /// ONLY VALID FOR TWO DIMENSIONS
-    // Theoretically valid for "n" dimensions with changes (N_Pro_transform())
-    // cout << "PRO Transform input 0: " << input.at(0) << endl;
-    // cout << "PRO Transform input 1: " << input.at(1) << endl;
-    //cout << "input size: " << input.size() << endl;
-    double dx = input.at(0)-1;
-    double dy = input.at(1)-1;
-    // cout << "dy,dx: " << dy << " , " << dx << endl;
-    double scaled_theta = atan2(dy,dx);
-    double rad = sqrt(dx*dx+dy*dy);
-
-    // cout << "rad: " << rad << "\ttheta: " << scaled_theta << endl;
+void Procedural_Transformation::N_Pro_reverse_transform(int indicator){
+    /// Note: Feb24-2014 Notation in this function is wrong due to reversal.
+        /// <LYLY Experimental>
+    static vector<vector<double> > popcorn;
+    if(indicator==0){
+        popcorn.clear();
+        for(int i=0; i<scPFront.size(); i++){
+            vector<double> pop;
+            for(int o=0; o<OBJECTIVES; o++){
+                //pop.push_back(LYRAND*0.05);
+                pop.push_back(0.0);
+            }
+            popcorn.push_back(pop);
+        }
+    }
     
-    double newrad;
-    double coef;
-    coef = 1;
-    /// determine coef based on PFront.
+    vector<double> deltas;
+    int I=input.size();
+    for(int i=0; i<I; i++){
+        deltas.push_back(input.at(i)-1);
+    }
+    
+    /// <FIND d>
+    double d_prime=0;
+    for(int i=0; i<I; i++){
+        d_prime+=deltas.at(i)*deltas.at(i);
+    }
+    d_prime=sqrt(d_prime);
+    cout << "input 0: " << input.at(0) << endl;
+    cout << "input 1: " << input.at(1) << endl;
+    cout << "dprime = " << d_prime << " (dist from 1,1 to point)" << endl;
+    
+    /// <FIND D>
+    double D;
+    /// find distance along utopia->input vector which is first dominated.
     double lowerbound = 0;
-    double upperbound = 2;
+    double upperbound = 10;
     double candidate;
-    double tx;
-    double ty;
-    double delta = 2;
+    double margin=upperbound-lowerbound;
     bool dominated;
-    while(delta>0.0001){
+    vector<double> td;
+    vector<double> directional_ratios;
+    
+    double sumdeltassq=0.0;
+    for(int i=0; i<I; i++){
+        sumdeltassq+=deltas.at(i)*deltas.at(i);
+    }
+    sumdeltassq=sqrt(sumdeltassq);
+    for(int i=0; i<I; i++){
+        /// More truly directional cosines.
+    directional_ratios.push_back(deltas.at(i)/sumdeltassq);
+    cout << "DIRECTIONAL COSINES " << i << " :: " << directional_ratios.back()<< endl;
+    }
+    td.resize(I);
+    
+    /// TODO intelligently select upper bound as a function of the number of objectives.
+    
+    while(margin>0.0001){
         dominated=false;
+        //cout << "DOMCHECK: " << dominated << endl;
         candidate=(upperbound+lowerbound)/2;
-        tx = 1 + candidate*cos(scaled_theta);
-        ty = 1 + candidate*sin(scaled_theta);
-        for(int i=0; i<PFront.size(); i++){
-           // cout << "tx: " << tx << "\tty: " << ty << endl;
-           // cout << "scPFront at " << i << " : " << scPFront.at(i).at(0) << "\t" << scPFront.at(i).at(1) << endl;
-           if(scPFront.at(i).at(0) >= tx && scPFront.at(i).at(1)>=ty){
-               dominated=true;
-               break;
-           }
+        //cout << "candidate: " << candidate << endl;
+        for(int i=0; i<I; i++){
+        td.at(i) = 1 + candidate*directional_ratios.at(i);
+        //cout << "point: " << i << " = " << td.at(i) << endl;
+        }
+        
+        for(int p=0; p<scPFront.size(); p++){
+            /// for each point in the scaled pareto front
+            int counter=0;
+            /// if all objectives score better than the td vector
+            for(int i=0; i<I; i++){
+                if(scPFront.at(p).at(i)+popcorn.at(p).at(i)>=td.at(i)){
+                    counter++;
+                }
+            }
+            if(counter==I){dominated=true;}
         }
         if(dominated==true){upperbound = candidate;}
         if(dominated==false){lowerbound = candidate;}
-        delta=upperbound-lowerbound;
+        margin=upperbound-lowerbound;
     }
-    double dominated_radius = (upperbound+lowerbound)/2;
+    D=(upperbound+lowerbound)/2;
+    cout << "D = " << D << " (dist from 1,1 to scpfront)" << endl;
+    
+    /// <FIND D'>
+    double Dprime;
     
     lowerbound = 0;
-    upperbound = 2;
-    delta=2;
-    while(delta>0.0001){
+    upperbound = 10;
+    margin=upperbound-lowerbound;
+    while(margin>0.0001){
         dominated=false;
         candidate=(upperbound+lowerbound)/2;
-        tx = 1 + candidate*cos(scaled_theta);
-        ty = 1 + candidate*sin(scaled_theta);
-        if(tx+ty <= 1){dominated = true;}
+        for(int i=0; i<I; i++){
+        td.at(i) = 1 + candidate*directional_ratios.at(i);
+        }
+        if(accumulate(td.begin(),td.end(),0.0) <= 1){dominated = true;}
         if(dominated==true){upperbound = candidate;}
         if(dominated==false){lowerbound = candidate;}
-        delta=upperbound-lowerbound;
+        margin=upperbound-lowerbound;
     }
-    double ideal_radius = (upperbound+lowerbound)/2;
+    Dprime = (upperbound+lowerbound)/2;
+    cout << "Dprime = " << Dprime << " (dist from 1,1 to LC = 1)" << endl;
     
-    coef = dominated_radius/ideal_radius;
-    
-    // cout << "dominated_radius: " << dominated_radius << endl;
-    // cout << "ideal radius: " << ideal_radius << endl;
-    // cout << "Coef: " << coef << endl;
-    
-    newrad = rad/coef;
-    
-    // cout << "newrad: " << newrad << endl;
-    
-    /// We need to determine the x,y values to give the transform output.
-    double x = 1 + newrad * cos(scaled_theta);
-    double y = 1 + newrad * sin(scaled_theta);
-    
-    // cout << "Newx: " << x << "\tNewy: " << y << endl;
+    /// <CALCULATE d'>
+    double d = d_prime*D/Dprime;
+    cout << "d = " << d << " end distance" << endl;
     
     output.clear();
-    //for (int a = 0; a < 1; a++) {
-        output.push_back(x);
-        output.push_back(y);
-    //}
+    double checksum=0;
+    int stopper;
+    for(int i=0; i<I; i++){
+        output.push_back(1+d*directional_ratios.at(i));
+        cout << "output " << i << " = " << output.at(i) << endl; 
+    }
 }
 
+double Procedural_Transformation::calc_d(vector<double> deltas){
+    int I=input.size();
+    for(int i=0; i<I; i++){
+        deltas.push_back(input.at(i)-1);
+    }
+    
+    double d=0;
+    for(int i=0; i<I; i++){
+        d+=deltas.at(i)*deltas.at(i);
+    }
+    d=sqrt(d);
+    return d;
+}
+
+double Procedural_Transformation::calc_D(vector<double> deltas, vector< vector<double> > popcorn){
+    int I=input.size();
+    /// <FIND D>
+    double D;
+    /// find distance along utopia->input vector which is first dominated.
+    double lowerbound = 0;
+    double upperbound = 10;
+    double candidate;
+    double margin=upperbound-lowerbound;
+    bool dominated;
+    vector<double> td;
+    vector<double> directional_ratios;
+    
+    double sumdeltassq=0.0;
+    for(int i=0; i<I; i++){
+        sumdeltassq+=deltas.at(i)*deltas.at(i);
+    }
+    sumdeltassq=sqrt(sumdeltassq);
+    for(int i=0; i<I; i++){
+        /// More truly directional cosines.
+    directional_ratios.push_back(deltas.at(i)/sumdeltassq);
+    //cout << "DIRECTIONAL COSINES " << i << " :: " << directional_ratios.back()<< endl;
+    }
+    td.resize(I);
+    
+    /// TODO intelligently select upper bound as a function of the number of objectives.
+    
+    while(margin>0.0001){
+        dominated=false;
+        //cout << "DOMCHECK: " << dominated << endl;
+        candidate=(upperbound+lowerbound)/2;
+        //cout << "candidate: " << candidate << endl;
+        for(int i=0; i<I; i++){
+        td.at(i) = 1 + candidate*directional_ratios.at(i);
+        //cout << "point: " << i << " = " << td.at(i) << endl;
+        }
+        
+        for(int p=0; p<scPFront.size(); p++){
+            /// for each point in the scaled pareto front
+            int counter=0;
+            /// if all objectives score better than the td vector
+            for(int i=0; i<I; i++){
+                if(scPFront.at(p).at(i)+popcorn.at(p).at(i)>=td.at(i)){
+                    counter++;
+                }
+            }
+            if(counter==I){dominated=true;}
+        }
+        if(dominated==true){upperbound = candidate;}
+        if(dominated==false){lowerbound = candidate;}
+        margin=upperbound-lowerbound;
+    }
+    D=(upperbound+lowerbound)/2;
+}
+
+double Procedural_Transformation::calc_Dprime(vector<double> directional_ratios){
+    int I=input.size();
+    /// <FIND D'>
+    double Dprime;
+    
+    vector<double> td;
+    td.resize(I);
+    
+    double lowerbound = 0;
+    double upperbound = 10;
+    double margin=upperbound-lowerbound;
+    while(margin>0.0001){
+        bool dominated=false;
+        double candidate=(upperbound+lowerbound)/2;
+        for(int i=0; i<I; i++){
+        td.at(i) = 1 + candidate*directional_ratios.at(i);
+        }
+        if(accumulate(td.begin(),td.end(),0.0) <= 1){dominated = true;}
+        if(dominated==true){upperbound = candidate;}
+        if(dominated==false){lowerbound = candidate;}
+        margin=upperbound-lowerbound;
+    }
+    Dprime = (upperbound+lowerbound)/2;
+}
+
+double Procedural_Transformation::calc_dprime(double d, double D, double Dprime){
+    double dprime = d*Dprime/D;
+    return dprime;
+}
 
 void Procedural_Transformation::calc_nadir(){
     for(int o=0; o<OBJECTIVES; o++){
@@ -751,46 +830,33 @@ void Procedural_Transformation::scale(){
     }
 }
 
-void Procedural_Transformation::execute_N_transform(vector<double>* pinputs, int indicator){
-    int I=pinputs->size();
-    take_input(pinputs);
-    // cout << "INPUTS TAKEN" << endl;
-    // for(int i=0; i<I; i++){
-    //     cout << i << ":" << pinputs->at(i) << "\t";
-    // }
-    // cout << endl;
-    scale();
-    // cout << "INPUTS SCALED" << endl;
-    // for(int i=0; i<I; i++){
-    //     cout << i << ":" << pinputs->at(i) << "\t";
-    // }
-    // cout << endl;
-    N_Pro_transform(indicator);
-    //N_Dummy_transform();
-    // cout << "TRANSFORMED!!!" << endl;
-    // for(int i=0; i<I; i++){
-    //     cout << i << ":" << pinputs->at(i) << "\t";
-    // }
-    // cout << endl;
-    give_output(pinputs);
-    // cout << "OUTPUTS:" << endl;
-    // for(int i=0; i<I; i++){
-    //     cout << i << ":" << pinputs->at(i) << "\t";
-    // }
-    // cout << endl;
+void Procedural_Transformation::scale_reverse(){
+    /// Reverse scaling, for the reverse transformation
+    for(int obj=0; obj<OBJECTIVES; obj++){
+        cout << "utopia " << obj << " = " << utopia.at(obj) << endl;
+        cout << "\t nadir " << obj << " = " << nadir.at(obj) << endl;
+        double range = utopia.at(obj)-nadir.at(obj);
+        cout << "range : " << range << endl;
+        cout << "output before: " << output.at(obj) << endl;
+        output.at(obj) = output.at(obj) * range +nadir.at(obj);
+        
+        //output.at(obj) = (output.at(obj) - nadir.at(obj)) / range;
+        cout << "output after: " << output.at(obj) << endl;
+    }
 }
 
-void Procedural_Transformation::execute_transform(vector<double>* pinputs){
-    /// Public method for performing the whole transformation.
-    //cout << "pinputs size: " << pinputs->size() << endl;
-    //cout << "pinputs: " << pinputs->at(0) << "\t" << pinputs->at(1) << endl;
+void Procedural_Transformation::execute_N_transform(vector<double>* pinputs, int indicator){
     take_input(pinputs);
-    //cout << "Inputs: " << input.at(0) << "\t" << input.at(1) << endl;
-    scale(); 
-    //cout << "Scaled Inputs: " << input.at(0) << "\t" << input.at(1) << endl;
-    Pro_transform();
+    scale();
+    N_Pro_transform(indicator);
     give_output(pinputs);
-    //cout << "Outputs: " << output.at(0) << "\t" << output.at(1) << endl;
+}
+
+void Procedural_Transformation::execute_N_reverse_transform(vector<double>* pinputs, int indicator){
+    take_input(pinputs);
+    N_Pro_reverse_transform(indicator);
+    scale_reverse();
+    give_output(pinputs);
 }
 
 void Pro_Pareto_testing(){
@@ -812,6 +878,10 @@ void Pro_Pareto_testing(){
     T.Pareto_Check(coords);
     T.cout_pareto();
     coords.clear();
+}
+
+void Procedural_testing(){
+    
 }
 
 #endif	/* PROCEDURAL_TRANSFORMATION_H */
