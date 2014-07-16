@@ -79,14 +79,12 @@ double vector_mean(vector<double> fit){
     return mean;
 }
 
-void report(FILE* pFILE, double value, int tabindicator) { /// report to text file
-    fprintf(pFILE, "%.5f", value);
-    if(tabindicator){
-        fprintf(pFILE,"\t");
-    }
+void report(FILE* pFILE, double value) { /// report to text file
+    fprintf(pFILE, "%.5f\t", value);
 }
+
 void newline(FILE* pFILE) { /// report to text file
-    fprintf(pFILE, "\n");
+    fprintf(pFILE, "\b \b\n");
 }
 
 
@@ -285,10 +283,10 @@ int main(){
                     fit.push_back(pVA->at(a).get_fitness());
                     times.push_back(- pVA->at(a).get_f1());
                     treasures.push_back(- pVA->at(a).get_f2());
-                   report(pFILE_fit,fit.back(),1); /// Report every result
-                   report(pFILE_time,times.back(),1); // Report every result
-                   report(pFILE_treasure,treasures.back(),1); // Report every result
-                   report(pFILE_pareto_number,T.get_pareto_size(),1);
+                   report(pFILE_fit,fit.back()); /// Report every result
+                   report(pFILE_time,times.back()); // Report every result
+                   report(pFILE_treasure,treasures.back()); // Report every result
+                   report(pFILE_pareto_number,T.get_pareto_size());
                 }
                 /// determine mean, median for reporting
                 double generation_median = vector_median(fit);
@@ -335,17 +333,17 @@ int main(){
                 }
                 
                 if (pretty_print) {
-                   report(pFILE_fit,generation_mean,1); /// report every result
-                   report(pFILE_time,median_time,1); // Report every result
-                   report(pFILE_treasure,median_treasure,1); // Report every result
-                   report(pFILE_pareto_number,T.get_pareto_size(),1);
+                   report(pFILE_fit,generation_mean); /// report every result
+                   report(pFILE_time,median_time); // Report every result
+                   report(pFILE_treasure,median_treasure); // Report every result
+                   report(pFILE_pareto_number,T.get_pareto_size());
                } else {                
                    //For Coarse Results
                    if (gen % (GENERATIONS / 100) == 0) {
-                       report(pFILE_fit,generation_mean,1); // Report only occasionally
-                       report(pFILE_time,median_time,1); // Report only occasionally
-                       report(pFILE_treasure,median_treasure,1); // Report only occasionally
-                       report(pFILE_pareto_number,T.get_pareto_size(),1);
+                       report(pFILE_fit,generation_mean); // Report only occasionally
+                       report(pFILE_time,median_time); // Report only occasionally
+                       report(pFILE_treasure,median_treasure); // Report only occasionally
+                       report(pFILE_pareto_number,T.get_pareto_size());
                    }
                }
                 
@@ -423,9 +421,9 @@ void grid_visualize(Procedural_Transformation* pT){
     for(int i=0; i<line.size(); i++){
     /// Print out before
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
@@ -433,7 +431,7 @@ void grid_visualize(Procedural_Transformation* pT){
         pT->execute_N_transform(pcoord,0);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
     }
@@ -456,9 +454,9 @@ void grid_visualize(Procedural_Transformation* pT){
     for(int i=0; i<line.size(); i++){
     /// Print out before
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
@@ -466,7 +464,7 @@ void grid_visualize(Procedural_Transformation* pT){
         pT->execute_N_transform(pcoord,0);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
     
@@ -487,12 +485,12 @@ void grid_visualize(Procedural_Transformation* pT){
         held=pT->get_ith_pareto_approximate_member(i);
         pH=&held;
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj),1);
+        report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
         pT->execute_N_transform(pH,0);
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj),1);
+        report(pFILE_trans_pareto,held.at(obj));
         }
         newline(pFILE_orig_pareto);
         newline(pFILE_trans_pareto);
@@ -573,7 +571,7 @@ void contour_visualize(Procedural_Transformation* pT){
         /// Print out transformed space
     for(int i=0; i<line.size(); i++){
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
         /// ^V.W.A.I. Feb 25, 2014.
@@ -585,9 +583,9 @@ void contour_visualize(Procedural_Transformation* pT){
 
     /// Print out untransformed
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     }
@@ -609,12 +607,12 @@ void contour_visualize(Procedural_Transformation* pT){
         held=pT->get_ith_pareto_approximate_member(i);
         pH=&held;
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj),1);
+        report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
         pT->execute_N_transform(pH,0);
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj),1);
+        report(pFILE_trans_pareto,held.at(obj));
         }
         newline(pFILE_orig_pareto);
         newline(pFILE_trans_pareto);

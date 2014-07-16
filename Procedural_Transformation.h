@@ -107,9 +107,9 @@ void Procedural_Transformation::exhaustive_to_file(){
     cout << "exhaustive in" << endl;
     PFILE=fopen("exhaustive_pareto.txt","w");
     for(int i=0; i<exhaustive_PFront.size(); i++){
-        report(PFILE,exhaustive_PFront.at(i).at(0),1);
-        report(PFILE,exhaustive_PFront.at(i).at(1),1);
-        report(PFILE,exhaustive_PFront.at(i).at(2),0);
+        for(int j=0; j<exhaustive_PFront.at(i).size(); j++){
+            report(PFILE,exhaustive_PFront.at(i).at(j));
+        }
         newline(PFILE);
     }
     fclose(PFILE);
@@ -121,9 +121,9 @@ void Procedural_Transformation::PFront_to_file(){
     cout << "Pfront to file in" << endl;
     PFILE=fopen("T_final_front.txt","w");
     for(int i=0; i<PFront.size(); i++){
-        report(PFILE,PFront.at(i).at(0),1);
-        report(PFILE,PFront.at(i).at(1),1);
-        report(PFILE,PFront.at(i).at(2),0); // no tab
+        for(int j=0; j<PFront.at(i).size(); j++){
+            report(PFILE,PFront.at(i).at(j));
+        }
         newline(PFILE);
     }
     cout << "Pfront to file out" << endl;

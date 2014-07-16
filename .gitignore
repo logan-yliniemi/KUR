@@ -11,3 +11,5 @@
 *.lai
 *.la
 *.a
+/KUR_Revamp/build/
+/KUR_Revamp/dist/
