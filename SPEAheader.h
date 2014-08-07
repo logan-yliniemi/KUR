@@ -112,8 +112,8 @@ void SPEA_2::final_archive(){
     pFILE = fopen ("spea_final_archive.txt","w");
     cout << "archive size: " << archive.size() << endl;
     for(int i=0; i<archive.size(); i++){
-        report(pFILE,archive.at(i).coordinates.at(0),1);
-        report(pFILE,archive.at(i).coordinates.at(1),0);
+        report(pFILE,archive.at(i).coordinates.at(0));
+        report(pFILE,archive.at(i).coordinates.at(1));
         newline(pFILE);
     }
     fclose(pFILE);

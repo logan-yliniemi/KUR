@@ -13,8 +13,8 @@
 #define BETA 0.5
 
 
-#define DO_LC 0
-#define DO_PACCET 1
+#define DO_LC 1
+#define DO_PACCET 0
 #define DO_NSGA 0
 #define DO_SPEA 0
 
@@ -79,14 +79,12 @@ double vector_mean(vector<double> fit){
     return mean;
 }
 
-void report(FILE* pFILE, double value, int tabindicator) { /// report to text file
-    fprintf(pFILE, "%.5f", value);
-    if(tabindicator){
-        fprintf(pFILE,"\t");
-    }
+void report(FILE* pFILE, double value) { /// report to text file
+    fprintf(pFILE, "%.5f\t", value);
 }
+
 void newline(FILE* pFILE) { /// report to text file
-    fprintf(pFILE, "\n");
+    fprintf(pFILE, "\b \b\n");
 }
 
 
@@ -102,10 +100,10 @@ class KURclass{
 public:
     double f1(double x1,double x2,double x3);
     double f2(double x1,double x2,double x3);
-    double start();
+    void start();
 };
 
-double KURclass::start(){
+void KURclass::start(){
     
 }
 
@@ -125,6 +123,13 @@ double KURclass::f2(double x1, double x2, double x3){
 
 int main(){
     srand(time(NULL));
+    
+    //srand(14);
+    //Pro_Pareto_Filter_Testing();
+    //Procedural_Testing();
+    //int iii;
+    //cin >> iii;
+    
     FILE* pFILE_fit;
     FILE* pFILE_time;
     FILE* pFILE_treasure;
@@ -157,8 +162,8 @@ int main(){
     for(int stat_run=0; stat_run < STAT_RUNS; stat_run++) {
             T.Pareto_Reset();
             vector<double> badness;
-            badness.push_back(-100.0);
-            badness.push_back(-100.0);
+            badness.push_back(1000.0);
+            badness.push_back(1000.0);
             T.Pareto_Check(badness);
             
             KURclass environment;
@@ -186,8 +191,8 @@ int main(){
                     pA->reset();
                     /// KUR is a bi-minimization problem. This implementation of PaCcET is for maximization.
                     /// Objective reversal is done here and here only.
-                    double f1hold = -pE->f1(pA->get_action(0),pA->get_action(1),pA->get_action(2));
-                    double f2hold = -pE->f2(pA->get_action(0),pA->get_action(1),pA->get_action(2));
+                    double f1hold = pE->f1(pA->get_action(0),pA->get_action(1),pA->get_action(2));
+                    double f2hold = pE->f2(pA->get_action(0),pA->get_action(1),pA->get_action(2));
                     pA->set_f1(f1hold);
                     pA->set_f2(f2hold);
                }
@@ -228,11 +233,10 @@ int main(){
                     SPEA.vector_input(MO,a);
                     }
                     if(DO_PACCET){
-                    T.execute_N_transform(pMO,0);
+                    T.execute_N_transform(pMO);
                     //T.Pareto_Check(OMO);
                     
-                    double TIME_WEIGHT=BETA;
-                    pVA->at(a).transformed_fitness = MO.at(0)*TIME_WEIGHT + MO.at(1)*(1-TIME_WEIGHT);
+                    pVA->at(a).transformed_fitness = MO.at(0)*BETA + MO.at(1)*(1-BETA);
                     pVA->at(a).fitness = pVA->at(a).transformed_fitness;
                     }
                 
@@ -282,13 +286,13 @@ int main(){
                 vector<double> treasures;
                 
                 for (int a = 0; a < pVA->size(); a++) {
-                    fit.push_back(pVA->at(a).get_fitness());
-                    times.push_back(- pVA->at(a).get_f1());
-                    treasures.push_back(- pVA->at(a).get_f2());
-                   report(pFILE_fit,fit.back(),1); /// Report every result
-                   report(pFILE_time,times.back(),1); // Report every result
-                   report(pFILE_treasure,treasures.back(),1); // Report every result
-                   report(pFILE_pareto_number,T.get_pareto_size(),1);
+                    fit.push_back(-pVA->at(a).get_fitness());
+                    times.push_back(pVA->at(a).get_f1());
+                    treasures.push_back(pVA->at(a).get_f2());
+                   report(pFILE_fit,fit.back()); /// Report every result
+                   report(pFILE_time,times.back()); // Report every result
+                   report(pFILE_treasure,treasures.back()); // Report every result
+                   report(pFILE_pareto_number,T.get_pareto_size());
                 }
                 /// determine mean, median for reporting
                 double generation_median = vector_median(fit);
@@ -335,17 +339,17 @@ int main(){
                 }
                 
                 if (pretty_print) {
-                   report(pFILE_fit,generation_mean,1); /// report every result
-                   report(pFILE_time,median_time,1); // Report every result
-                   report(pFILE_treasure,median_treasure,1); // Report every result
-                   report(pFILE_pareto_number,T.get_pareto_size(),1);
+                   report(pFILE_fit,generation_mean); /// report every result
+                   report(pFILE_time,median_time); // Report every result
+                   report(pFILE_treasure,median_treasure); // Report every result
+                   report(pFILE_pareto_number,T.get_pareto_size());
                } else {                
                    //For Coarse Results
                    if (gen % (GENERATIONS / 100) == 0) {
-                       report(pFILE_fit,generation_mean,1); // Report only occasionally
-                       report(pFILE_time,median_time,1); // Report only occasionally
-                       report(pFILE_treasure,median_treasure,1); // Report only occasionally
-                       report(pFILE_pareto_number,T.get_pareto_size(),1);
+                       report(pFILE_fit,generation_mean); // Report only occasionally
+                       report(pFILE_time,median_time); // Report only occasionally
+                       report(pFILE_treasure,median_treasure); // Report only occasionally
+                       report(pFILE_pareto_number,T.get_pareto_size());
                    }
                }
                 
@@ -367,7 +371,7 @@ int main(){
     
     Procedural_Transformation* pT=&T;
     //grid_visualize(pT);
-    contour_visualize(pT);
+    //contour_visualize(pT);
 }
 
 void grid_visualize(Procedural_Transformation* pT){
@@ -423,17 +427,17 @@ void grid_visualize(Procedural_Transformation* pT){
     for(int i=0; i<line.size(); i++){
     /// Print out before
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord,0);
+        pT->execute_N_transform(pcoord);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
     }
@@ -456,17 +460,17 @@ void grid_visualize(Procedural_Transformation* pT){
     for(int i=0; i<line.size(); i++){
     /// Print out before
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord,0);
+        pT->execute_N_transform(pcoord);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
     
@@ -487,12 +491,12 @@ void grid_visualize(Procedural_Transformation* pT){
         held=pT->get_ith_pareto_approximate_member(i);
         pH=&held;
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj),1);
+        report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
-        pT->execute_N_transform(pH,0);
+        pT->execute_N_transform(pH);
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj),1);
+        report(pFILE_trans_pareto,held.at(obj));
         }
         newline(pFILE_orig_pareto);
         newline(pFILE_trans_pareto);
@@ -573,7 +577,7 @@ void contour_visualize(Procedural_Transformation* pT){
         /// Print out transformed space
     for(int i=0; i<line.size(); i++){
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j),1);
+        report(pFILE_trans,line.at(i).at(j));
         }
         newline(pFILE_trans);
         /// ^V.W.A.I. Feb 25, 2014.
@@ -581,13 +585,13 @@ void contour_visualize(Procedural_Transformation* pT){
         /// Reverse Transformation
         /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_reverse_transform(pcoord,0);
+        pT->execute_N_reverse_transform(pcoord);
 
     /// Print out untransformed
         for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j),1);
+        report(pFILE_coord,line.at(i).at(j));
         }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)),1);
+        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
         newline(pFILE_coord);
         newline(pFILE_dom);
     }
@@ -609,12 +613,12 @@ void contour_visualize(Procedural_Transformation* pT){
         held=pT->get_ith_pareto_approximate_member(i);
         pH=&held;
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj),1);
+        report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
-        pT->execute_N_transform(pH,0);
+        pT->execute_N_transform(pH);
         for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj),1);
+        report(pFILE_trans_pareto,held.at(obj));
         }
         newline(pFILE_orig_pareto);
         newline(pFILE_trans_pareto);
