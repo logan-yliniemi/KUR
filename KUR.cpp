@@ -13,8 +13,8 @@
 #define BETA 0.5
 
 
-#define DO_LC 0
-#define DO_PACCET 1
+#define DO_LC 1
+#define DO_PACCET 0
 #define DO_NSGA 0
 #define DO_SPEA 0
 
@@ -100,10 +100,10 @@ class KURclass{
 public:
     double f1(double x1,double x2,double x3);
     double f2(double x1,double x2,double x3);
-    double start();
+    void start();
 };
 
-double KURclass::start(){
+void KURclass::start(){
     
 }
 
@@ -123,6 +123,13 @@ double KURclass::f2(double x1, double x2, double x3){
 
 int main(){
     srand(time(NULL));
+    
+    //srand(14);
+    //Pro_Pareto_Filter_Testing();
+    //Procedural_Testing();
+    //int iii;
+    //cin >> iii;
+    
     FILE* pFILE_fit;
     FILE* pFILE_time;
     FILE* pFILE_treasure;
@@ -155,8 +162,8 @@ int main(){
     for(int stat_run=0; stat_run < STAT_RUNS; stat_run++) {
             T.Pareto_Reset();
             vector<double> badness;
-            badness.push_back(-100.0);
-            badness.push_back(-100.0);
+            badness.push_back(1000.0);
+            badness.push_back(1000.0);
             T.Pareto_Check(badness);
             
             KURclass environment;
@@ -184,8 +191,8 @@ int main(){
                     pA->reset();
                     /// KUR is a bi-minimization problem. This implementation of PaCcET is for maximization.
                     /// Objective reversal is done here and here only.
-                    double f1hold = -pE->f1(pA->get_action(0),pA->get_action(1),pA->get_action(2));
-                    double f2hold = -pE->f2(pA->get_action(0),pA->get_action(1),pA->get_action(2));
+                    double f1hold = pE->f1(pA->get_action(0),pA->get_action(1),pA->get_action(2));
+                    double f2hold = pE->f2(pA->get_action(0),pA->get_action(1),pA->get_action(2));
                     pA->set_f1(f1hold);
                     pA->set_f2(f2hold);
                }
@@ -226,11 +233,10 @@ int main(){
                     SPEA.vector_input(MO,a);
                     }
                     if(DO_PACCET){
-                    T.execute_N_transform(pMO,0);
+                    T.execute_N_transform(pMO);
                     //T.Pareto_Check(OMO);
                     
-                    double TIME_WEIGHT=BETA;
-                    pVA->at(a).transformed_fitness = MO.at(0)*TIME_WEIGHT + MO.at(1)*(1-TIME_WEIGHT);
+                    pVA->at(a).transformed_fitness = MO.at(0)*BETA + MO.at(1)*(1-BETA);
                     pVA->at(a).fitness = pVA->at(a).transformed_fitness;
                     }
                 
@@ -280,9 +286,9 @@ int main(){
                 vector<double> treasures;
                 
                 for (int a = 0; a < pVA->size(); a++) {
-                    fit.push_back(pVA->at(a).get_fitness());
-                    times.push_back(- pVA->at(a).get_f1());
-                    treasures.push_back(- pVA->at(a).get_f2());
+                    fit.push_back(-pVA->at(a).get_fitness());
+                    times.push_back(pVA->at(a).get_f1());
+                    treasures.push_back(pVA->at(a).get_f2());
                    report(pFILE_fit,fit.back()); /// Report every result
                    report(pFILE_time,times.back()); // Report every result
                    report(pFILE_treasure,treasures.back()); // Report every result
@@ -365,7 +371,7 @@ int main(){
     
     Procedural_Transformation* pT=&T;
     //grid_visualize(pT);
-    contour_visualize(pT);
+    //contour_visualize(pT);
 }
 
 void grid_visualize(Procedural_Transformation* pT){
@@ -428,7 +434,7 @@ void grid_visualize(Procedural_Transformation* pT){
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord,0);
+        pT->execute_N_transform(pcoord);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
         report(pFILE_trans,line.at(i).at(j));
@@ -461,7 +467,7 @@ void grid_visualize(Procedural_Transformation* pT){
         newline(pFILE_dom);
     /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord,0);
+        pT->execute_N_transform(pcoord);
     /// Print out after
         for(int j=0; j<line.at(i).size(); j++){
         report(pFILE_trans,line.at(i).at(j));
@@ -488,7 +494,7 @@ void grid_visualize(Procedural_Transformation* pT){
         report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
-        pT->execute_N_transform(pH,0);
+        pT->execute_N_transform(pH);
         for(int obj=0; obj<OBJECTIVES; obj++){
         report(pFILE_trans_pareto,held.at(obj));
         }
@@ -579,7 +585,7 @@ void contour_visualize(Procedural_Transformation* pT){
         /// Reverse Transformation
         /// Take one coords at a time, feed it through transformation
         pcoord = &line.at(i);
-        pT->execute_N_reverse_transform(pcoord,0);
+        pT->execute_N_reverse_transform(pcoord);
 
     /// Print out untransformed
         for(int j=0; j<line.at(i).size(); j++){
@@ -610,7 +616,7 @@ void contour_visualize(Procedural_Transformation* pT){
         report(pFILE_orig_pareto,held.at(obj));
         }
         /// print out transformed Pareto front
-        pT->execute_N_transform(pH,0);
+        pT->execute_N_transform(pH);
         for(int obj=0; obj<OBJECTIVES; obj++){
         report(pFILE_trans_pareto,held.at(obj));
         }
