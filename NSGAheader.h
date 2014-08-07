@@ -80,11 +80,11 @@ private:
     void declare_NSGA_dimension(int);
 
     void show_tiers();
-    void should_execute();
+    int should_execute();
     bool first_dominates_second(vector<double> a, vector<double> b);
 };
 
-void NSGA_2::should_execute()
+int NSGA_2::should_execute()
 {
 
 }
