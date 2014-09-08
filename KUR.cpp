@@ -7,7 +7,7 @@
 /// <PARAM>
 #define POPULATION 100
 #define ELIMINATE 50
-#define GENERATIONS 2500
+#define GENERATIONS 500
 #define STEPS 1
 #define STAT_RUNS 1
 #define BETA 0.5
@@ -33,6 +33,7 @@ using namespace std;
 #ifndef VECTOR_INCLUDE
 #define VECTOR_INCLUDE
 #include <vector>
+#include <list>
 #endif
 
 #define PI 3.1415
@@ -121,8 +122,322 @@ double KURclass::f2(double x1, double x2, double x3){
     return val;
 }
 
+
+void grid_visualize(Procedural_Transformation* pT){
+    cout << "Grid Visualize Starting" << endl;
+    
+    FILE* pFILE_coord;
+    FILE* pFILE_dom;
+    FILE* pFILE_trans;
+    
+    pFILE_coord=fopen("before_coord.txt","w");
+    pFILE_dom=fopen("dom.txt","w");
+    pFILE_trans=fopen("after_coord.txt","w");
+    
+    vector<vector< double > > line;
+    vector<double>* pcoord;
+    
+    /// Decide on grid line spacing
+    int grid_lines,spaces;
+    int ppl;
+    double xmin,xmax,ymin,ymax;
+    
+    /// <PARAM>
+    grid_lines=10;
+    spaces=grid_lines-1;
+    xmax = 19.9;
+    xmin = 14.44;
+    ymax = 11.42;
+    ymin = -0.1;
+    ppl = 200;
+    
+    double x_const_spacing = (xmax-xmin) / spaces;
+    double y_const_spacing = (ymax-ymin) / spaces;
+    double x_dot_spacing = (xmax-xmin) / ppl;
+    double y_dot_spacing = (ymax-ymin) / ppl;
+    
+    double xconst;
+    double xvar;
+    double yconst;
+    double yvar;
+    
+    /// x constant lines
+    for(int ln=0; ln<grid_lines; ln++){
+        line.clear();
+        /// Make Single Grid line
+        xconst= xmin + x_const_spacing*ln;
+        for(int pt=0; pt<ppl; pt++){
+            yvar= ymin + y_dot_spacing * pt;
+            vector<double> point;
+            point.push_back(xconst);
+            point.push_back(yvar);
+            line.push_back(point);
+        }
+        for(int i=0; i<line.size(); i++){
+            /// Print out before
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_coord,line.at(i).at(j));
+            }
+            report(pFILE_dom,pT->Dominated_Check(line.at(i)));
+            newline(pFILE_coord);
+            newline(pFILE_dom);
+            /// Take one coords at a time, feed it through transformation
+            pcoord = &line.at(i);
+            pT->execute_N_transform(pcoord);
+            /// Print out after
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_trans,line.at(i).at(j));
+            }
+            newline(pFILE_trans);
+        }
+        
+    }
+    
+    /// y constant lines
+    for(int ln=0; ln<grid_lines; ln++){
+        line.clear();
+        /// Make Single Grid line
+        yconst = ymin + y_const_spacing*ln;
+        for(int pt=0; pt<ppl; pt++){
+            xvar= xmin + x_dot_spacing*pt;
+            vector<double> point;
+            point.push_back(xvar);
+            point.push_back(yconst);
+            line.push_back(point);
+        }
+        
+        for(int i=0; i<line.size(); i++){
+            /// Print out before
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_coord,line.at(i).at(j));
+            }
+            report(pFILE_dom,pT->Dominated_Check(line.at(i)));
+            newline(pFILE_coord);
+            newline(pFILE_dom);
+            /// Take one coords at a time, feed it through transformation
+            pcoord = &line.at(i);
+            pT->execute_N_transform(pcoord);
+            /// Print out after
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_trans,line.at(i).at(j));
+            }
+            newline(pFILE_trans);
+            
+        }
+    }
+    fclose(pFILE_coord);
+    fclose(pFILE_dom);
+    fclose(pFILE_trans);
+    
+    
+    vector<double> held;
+    vector<double>* pH;
+    
+    FILE* pFILE_orig_pareto=fopen("orig_pareto.txt","w");
+    FILE* pFILE_trans_pareto=fopen("trans_pareto.txt","w");
+    for(int i=0; i<pT->get_pareto_size(); i++){
+        /// print out original Pareto front
+        held=pT->get_ith_pareto_approximate_member(i);
+        pH=&held;
+        for(int obj=0; obj<OBJECTIVES; obj++){
+            report(pFILE_orig_pareto,held.at(obj));
+        }
+        /// print out transformed Pareto front
+        pT->execute_N_transform(pH);
+        for(int obj=0; obj<OBJECTIVES; obj++){
+            report(pFILE_trans_pareto,held.at(obj));
+        }
+        newline(pFILE_orig_pareto);
+        newline(pFILE_trans_pareto);
+    }
+    fclose(pFILE_orig_pareto);
+    fclose(pFILE_trans_pareto);
+    
+    cout << "Grid Visualize Ending" << endl;
+}
+
+void contour_visualize(Procedural_Transformation* pT){
+    cout << "Contour Visualize Starting" << endl;
+    
+    int EQUAL_CONTOUR=1;
+    int STEEPEST_GROWTH=0;
+    
+    FILE* pFILE_coord;
+    FILE* pFILE_dom;
+    FILE* pFILE_trans;
+    
+    pFILE_coord=fopen("regular_space_coords.txt","w");
+    pFILE_dom=fopen("dom.txt","w");
+    pFILE_trans=fopen("transformed_space_coords.txt","w");
+    
+    vector<vector< double > > line;
+    vector<double>* pcoord;
+    
+    /// Decide on grid line spacing
+    int grid_lines,spaces;
+    int ppl;
+    double min_contour,max_contour,width;
+    
+    /// <PARAM>
+    grid_lines=60;
+    spaces=grid_lines-1;
+    min_contour = 0;
+    max_contour = 1;
+    width = 1.4;
+    ppl = 200;
+    
+    double line_spacing = (max_contour - min_contour) / spaces;
+    double dot_spacing = width/ppl;
+    
+    
+    double contour = min_contour;
+    for(int ln=0; ln<grid_lines; ln++){
+        line.clear();
+        /// Make Single Contour line
+        /// Contour Value
+        contour += line_spacing;
+        double x,y;
+        if(EQUAL_CONTOUR){
+            x = contour*sqrt(2) - width*sqrt(2)/2;
+            y = contour*sqrt(2) + width*sqrt(2)/2;
+        }
+        if(STEEPEST_GROWTH){
+            x = contour*sqrt(2) - width*sqrt(2)/2;
+            y = - contour*sqrt(2) + width*sqrt(2)/2;
+        }
+        for(int pt=0; pt<ppl; pt++){
+            vector<double> point;
+            point.push_back(x);
+            point.push_back(y);
+            
+            
+            line.push_back(point);
+            if(EQUAL_CONTOUR){
+                y-=dot_spacing*sqrt(2);
+                x+=dot_spacing*sqrt(2);
+            }
+            if(STEEPEST_GROWTH){
+                y+=dot_spacing*sqrt(2);
+                x+=dot_spacing*sqrt(2);
+            }
+            
+        }
+        
+        /// Print out transformed space
+        for(int i=0; i<line.size(); i++){
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_trans,line.at(i).at(j));
+            }
+            newline(pFILE_trans);
+            /// ^V.W.A.I. Feb 25, 2014.
+            
+            /// Reverse Transformation
+            /// Take one coords at a time, feed it through transformation
+            pcoord = &line.at(i);
+            pT->execute_N_reverse_transform(pcoord);
+            
+            /// Print out untransformed
+            for(int j=0; j<line.at(i).size(); j++){
+                report(pFILE_coord,line.at(i).at(j));
+            }
+            report(pFILE_dom,pT->Dominated_Check(line.at(i)));
+            newline(pFILE_coord);
+            newline(pFILE_dom);
+        }
+        
+    }
+    
+    fclose(pFILE_coord);
+    fclose(pFILE_dom);
+    fclose(pFILE_trans);
+    
+    
+    vector<double> held;
+    vector<double>* pH;
+    
+    FILE* pFILE_orig_pareto=fopen("orig_pareto.txt","w");
+    FILE* pFILE_trans_pareto=fopen("trans_pareto.txt","w");
+    for(int i=0; i<pT->get_pareto_size(); i++){
+        /// print out original Pareto front
+        held=pT->get_ith_pareto_approximate_member(i);
+        pH=&held;
+        for(int obj=0; obj<OBJECTIVES; obj++){
+            report(pFILE_orig_pareto,held.at(obj));
+        }
+        /// print out transformed Pareto front
+        pT->execute_N_transform(pH);
+        for(int obj=0; obj<OBJECTIVES; obj++){
+            report(pFILE_trans_pareto,held.at(obj));
+        }
+        newline(pFILE_orig_pareto);
+        newline(pFILE_trans_pareto);
+    }
+    fclose(pFILE_orig_pareto);
+    fclose(pFILE_trans_pareto);
+    
+    cout << "Contour Visualize Ending" << endl;
+}
+
+void Elimination_testing(){
+    Procedural_Transformation T;
+    T.Pareto_Reset();
+    vector<double> badness;
+    badness.push_back(1000.0);
+    badness.push_back(0.0);
+    T.Pareto_Check(badness);
+    badness.clear();
+    //badness.push_back(2000.0);
+    //badness.push_back(500.0);
+    //T.Pareto_Check(badness);
+    //badness.clear();
+    badness.push_back(0.0);
+    badness.push_back(2000.0);
+    T.Pareto_Check(badness);
+    badness.clear();
+    //badness.push_back(0.0);
+    //badness.push_back(2000.0);
+    //T.Pareto_Check(badness);
+    //badness.clear();
+    
+    T.cout_pareto();
+    
+    //vector<double> MO;
+    //MO.push_back(0);
+    //MO.push_back(0);
+    //T.Pareto_Check(MO);
+    //vector<double>* pMO;
+    //pMO = &MO;
+    
+    vector<double> MO2;
+    MO2.push_back(1000);
+    MO2.push_back(500);
+    vector<double>* pMO2;
+    pMO2=&MO2;
+    
+    
+    //list< vector<double> > scPFront_temp;
+    //std::copy( T.scPFront.begin(), T.scPFront.end(), std::back_inserter( scPFront_temp ) );
+    
+    //T.execute_N_transform(pMO);
+    T.execute_N_transform(pMO2);
+    
+    //cout << "ONE: " << pMO->at(0) + pMO->at(1) << endl;
+    cout << "TWO: " << pMO2->at(0) + pMO2->at(1) << endl;
+    
+    //T.calc_D();
+    
+}
+
 int main(){
     srand(time(NULL));
+    
+    int TEST =0;
+    if(TEST){
+    Elimination_testing();
+    cout << "remember to cancel the run\n" << endl;
+    int i;
+    cin >> i;
+    }
     
     //srand(14);
     //Pro_Pareto_Filter_Testing();
@@ -235,7 +550,6 @@ int main(){
                     if(DO_PACCET){
                     T.execute_N_transform(pMO);
                     //T.Pareto_Check(OMO);
-                    
                     pVA->at(a).transformed_fitness = MO.at(0)*BETA + MO.at(1)*(1-BETA);
                     pVA->at(a).fitness = pVA->at(a).transformed_fitness;
                     }
@@ -286,7 +600,7 @@ int main(){
                 vector<double> treasures;
                 
                 for (int a = 0; a < pVA->size(); a++) {
-                    fit.push_back(-pVA->at(a).get_fitness());
+                    fit.push_back(-pVA->at(a).get_fitness()); /// needed for minimization (we always maximize fitness)
                     times.push_back(pVA->at(a).get_f1());
                     treasures.push_back(pVA->at(a).get_f2());
                    report(pFILE_fit,fit.back()); /// Report every result
@@ -370,261 +684,6 @@ int main(){
     T.cout_pareto();
     
     Procedural_Transformation* pT=&T;
-    //grid_visualize(pT);
-    //contour_visualize(pT);
-}
-
-void grid_visualize(Procedural_Transformation* pT){
-    cout << "Grid Visualize Starting" << endl;
-    
-    FILE* pFILE_coord;
-    FILE* pFILE_dom;
-    FILE* pFILE_trans;
-    
-    pFILE_coord=fopen("before_coord.txt","w");
-    pFILE_dom=fopen("dom.txt","w");
-    pFILE_trans=fopen("after_coord.txt","w");
-    
-    vector<vector< double > > line;
-    vector<double>* pcoord;
-    
-    /// Decide on grid line spacing
-    int grid_lines,spaces;
-    int ppl;
-    double xmin,xmax,ymin,ymax;
-    
-    /// <PARAM>
-    grid_lines=10;
-    spaces=grid_lines-1;
-    xmax = 19.9;
-    xmin = 14.44;
-    ymax = 11.42;
-    ymin = -0.1;
-    ppl = 200;
-    
-    double x_const_spacing = (xmax-xmin) / spaces;
-    double y_const_spacing = (ymax-ymin) / spaces;
-    double x_dot_spacing = (xmax-xmin) / ppl;
-    double y_dot_spacing = (ymax-ymin) / ppl;
-    
-    double xconst;
-    double xvar;
-    double yconst;
-    double yvar;
-    
-    /// x constant lines
-    for(int ln=0; ln<grid_lines; ln++){
-        line.clear();
-    /// Make Single Grid line
-         xconst= xmin + x_const_spacing*ln;
-         for(int pt=0; pt<ppl; pt++){
-         yvar= ymin + y_dot_spacing * pt;
-         vector<double> point;
-         point.push_back(xconst);
-         point.push_back(yvar);
-         line.push_back(point);
-         } 
-    for(int i=0; i<line.size(); i++){
-    /// Print out before
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j));
-        }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
-        newline(pFILE_coord);
-        newline(pFILE_dom);
-    /// Take one coords at a time, feed it through transformation
-        pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord);
-    /// Print out after
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j));
-        }
-        newline(pFILE_trans);
-    }
-    
-    }
-    
-    /// y constant lines
-    for(int ln=0; ln<grid_lines; ln++){
-        line.clear();
-    /// Make Single Grid line
-        yconst = ymin + y_const_spacing*ln;
-        for(int pt=0; pt<ppl; pt++){
-            xvar= xmin + x_dot_spacing*pt;
-            vector<double> point;
-            point.push_back(xvar);
-            point.push_back(yconst);
-            line.push_back(point);
-        }
-        
-    for(int i=0; i<line.size(); i++){
-    /// Print out before
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j));
-        }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
-        newline(pFILE_coord);
-        newline(pFILE_dom);
-    /// Take one coords at a time, feed it through transformation
-        pcoord = &line.at(i);
-        pT->execute_N_transform(pcoord);
-    /// Print out after
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j));
-        }
-        newline(pFILE_trans);
-    
-    }
-    }
-    fclose(pFILE_coord);
-    fclose(pFILE_dom);
-    fclose(pFILE_trans);
-    
-    
-    vector<double> held;
-    vector<double>* pH;
-    
-    FILE* pFILE_orig_pareto=fopen("orig_pareto.txt","w");
-    FILE* pFILE_trans_pareto=fopen("trans_pareto.txt","w");
-    for(int i=0; i<pT->get_pareto_size(); i++){
-        /// print out original Pareto front
-        held=pT->get_ith_pareto_approximate_member(i);
-        pH=&held;
-        for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj));
-        }
-        /// print out transformed Pareto front
-        pT->execute_N_transform(pH);
-        for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj));
-        }
-        newline(pFILE_orig_pareto);
-        newline(pFILE_trans_pareto);
-    }
-    fclose(pFILE_orig_pareto);
-    fclose(pFILE_trans_pareto);
-    
-    cout << "Grid Visualize Ending" << endl;
-}
-
-void contour_visualize(Procedural_Transformation* pT){
-    cout << "Contour Visualize Starting" << endl;
-    
-    int EQUAL_CONTOUR=1;
-    int STEEPEST_GROWTH=0;
-    
-    FILE* pFILE_coord;
-    FILE* pFILE_dom;
-    FILE* pFILE_trans;
-    
-    pFILE_coord=fopen("regular_space_coords.txt","w");
-    pFILE_dom=fopen("dom.txt","w");
-    pFILE_trans=fopen("transformed_space_coords.txt","w");
-    
-    vector<vector< double > > line;
-    vector<double>* pcoord;
-    
-    /// Decide on grid line spacing
-    int grid_lines,spaces;
-    int ppl;
-    double min_contour,max_contour,width;
-    
-    /// <PARAM>
-    grid_lines=60;
-    spaces=grid_lines-1;
-    min_contour = 0;
-    max_contour = 1;
-    width = 1.4;
-    ppl = 200;
-    
-    double line_spacing = (max_contour - min_contour) / spaces;
-    double dot_spacing = width/ppl;
-    
-    
-    double contour = min_contour;
-    for(int ln=0; ln<grid_lines; ln++){
-        line.clear();
-    /// Make Single Contour line
-    /// Contour Value
-        contour += line_spacing;
-        double x,y;
-        if(EQUAL_CONTOUR){
-            x = contour*sqrt(2) - width*sqrt(2)/2; 
-            y = contour*sqrt(2) + width*sqrt(2)/2;
-        }
-        if(STEEPEST_GROWTH){
-            x = contour*sqrt(2) - width*sqrt(2)/2; 
-            y = - contour*sqrt(2) + width*sqrt(2)/2;
-        }
-         for(int pt=0; pt<ppl; pt++){
-         vector<double> point;
-         point.push_back(x);
-         point.push_back(y);
-         
-         
-         line.push_back(point);
-         if(EQUAL_CONTOUR){
-         y-=dot_spacing*sqrt(2);
-         x+=dot_spacing*sqrt(2);
-         }
-         if(STEEPEST_GROWTH){
-         y+=dot_spacing*sqrt(2);
-         x+=dot_spacing*sqrt(2);
-         }
-         
-         }
-        
-        /// Print out transformed space
-    for(int i=0; i<line.size(); i++){
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_trans,line.at(i).at(j));
-        }
-        newline(pFILE_trans);
-        /// ^V.W.A.I. Feb 25, 2014.
-        
-        /// Reverse Transformation
-        /// Take one coords at a time, feed it through transformation
-        pcoord = &line.at(i);
-        pT->execute_N_reverse_transform(pcoord);
-
-    /// Print out untransformed
-        for(int j=0; j<line.at(i).size(); j++){
-        report(pFILE_coord,line.at(i).at(j));
-        }
-        report(pFILE_dom,pT->Dominated_Check(line.at(i)));
-        newline(pFILE_coord);
-        newline(pFILE_dom);
-    }
-    
-    }
-    
-    fclose(pFILE_coord);
-    fclose(pFILE_dom);
-    fclose(pFILE_trans);
-    
-    
-    vector<double> held;
-    vector<double>* pH;
-    
-    FILE* pFILE_orig_pareto=fopen("orig_pareto.txt","w");
-    FILE* pFILE_trans_pareto=fopen("trans_pareto.txt","w");
-    for(int i=0; i<pT->get_pareto_size(); i++){
-        /// print out original Pareto front
-        held=pT->get_ith_pareto_approximate_member(i);
-        pH=&held;
-        for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_orig_pareto,held.at(obj));
-        }
-        /// print out transformed Pareto front
-        pT->execute_N_transform(pH);
-        for(int obj=0; obj<OBJECTIVES; obj++){
-        report(pFILE_trans_pareto,held.at(obj));
-        }
-        newline(pFILE_orig_pareto);
-        newline(pFILE_trans_pareto);
-    }
-    fclose(pFILE_orig_pareto);
-    fclose(pFILE_trans_pareto);
-    
-    cout << "Contour Visualize Ending" << endl;
+    grid_visualize(pT);
+    contour_visualize(pT);
 }
